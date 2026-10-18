@@ -1,0 +1,34 @@
+(function () {
+  var U = { ft: .3048, 'in': .0254, m: 1, cm: .01, mm: .001 }, $ = function (s) { return document.getElementById(s); };
+  var P = JSON.parse($('presets').textContent), form = $('calc'), out = $('result'), kind = form.dataset.type || 'brick', ops = [];
+  var UNITS = [['ft', 'Feet'], ['in', 'Inches'], ['m', 'Meters'], ['cm', 'Centimeters'], ['mm', 'Millimeters']];
+  var num = function (v) { v = String(v).trim(); return v === '' ? 0 : Number(v); }, pos = function (n) { return isFinite(n) && n > 0; };
+  var fmt = function (n, d) { return Number(n).toLocaleString('en-US', { maximumFractionDigits: d || 0 }); };
+  var el = function (t, c, x) { var e = document.createElement(t); if (c) e.className = c; if (x != null) e.textContent = x; return e; };
+  function tabs() { [].forEach.call(form.querySelectorAll('.tab'), function (t) { t.setAttribute('aria-selected', String(t.dataset.kind === kind)); }); $('kind-label').textContent = kind === 'brick' ? 'Brick' : 'Block'; $('go').textContent = 'Calculate ' + kind + 's';
+    var list = P.filter(function (p) { return p.kind === kind; }), s = $('preset'); s.innerHTML = ''; var o = el('option', '', 'Custom size'); o.value = ''; s.appendChild(o);
+    list.forEach(function (p, i) { var x = el('option', '', p.name); x.value = i; s.appendChild(x); }); $('preset-wrap').hidden = !list.length; s._list = list; }
+  $('preset').addEventListener('change', function () { var p = this._list[this.value]; if (p) { $('ul').value = p.l; $('uw').value = p.w; $('uh').value = p.h; $('jt').value = p.j; } });
+  [].forEach.call(form.querySelectorAll('.tab'), function (t) { t.addEventListener('click', function () { kind = t.dataset.kind; $('ul').value = $('uw').value = $('uh').value = ''; tabs(); out.replaceChildren(el('div', 'notice', 'Enter your wall and unit size, then press Calculate.')); }); });
+  function row(i) { var r = el('div', 'opening-row'); [['Width', 'w'], ['Height', 'h'], ['Qty', 'q']].forEach(function (f) { var l = el('label', 'field'); l.appendChild(el('span', '', f[0])); var inp = el('input'); inp.type = 'number'; inp.step = f[1] === 'q' ? '1' : 'any'; inp.min = '0'; inp.value = ops[i][f[1]]; inp.addEventListener('input', function () { ops[i][f[1]] = inp.value; }); l.appendChild(inp); r.appendChild(l); });
+    var l = el('label', 'field'); l.appendChild(el('span', '', 'Unit')); var s = el('select'); UNITS.forEach(function (u) { var o = el('option', '', u[1]); o.value = u[0]; if (u[0] === ops[i].u) o.selected = true; s.appendChild(o); }); s.addEventListener('change', function () { ops[i].u = s.value; }); l.appendChild(s); r.appendChild(l);
+    var b = el('button', 'btn btn-ghost', 'Remove'); b.type = 'button'; b.setAttribute('aria-label', 'Remove opening ' + (i + 1)); b.addEventListener('click', function () { ops.splice(i, 1); draw(); }); r.appendChild(b); return r; }
+  function draw() { var c = $('openings'); c.innerHTML = ''; ops.forEach(function (_, i) { c.appendChild(row(i)); }); }
+  $('add-open').addEventListener('click', function () { ops.push({ w: '', h: '', q: '1', u: $('unit').value }); draw(); });
+  function calc() {
+    var e = [], u = $('unit').value, L = num($('len').value), H = num($('hgt').value), T = num($('thk').value), a = num($('ul').value), b = num($('uw').value), c = num($('uh').value), j = num($('jt').value), w = num($('waste').value);
+    if (!pos(L)) e.push('Wall length must be greater than 0.'); if (!pos(H)) e.push('Wall height must be greater than 0.'); if (!pos(T)) e.push('Wall thickness must be greater than 0.');
+    if (!pos(a) || !pos(b) || !pos(c)) e.push('Unit size must be greater than 0.'); if (!isFinite(j) || j < 0) e.push('Mortar joint cannot be negative.'); if (!isFinite(w) || w < 0 || w > 100) e.push('Wastage must be between 0 and 100%.');
+    var open = 0; ops.forEach(function (o, i) { if (!String(o.w).trim() && !String(o.h).trim()) return; var ow = num(o.w), oh = num(o.h), q = String(o.q).trim() === '' ? 1 : Number(o.q); if (!pos(ow) || !pos(oh)) e.push('Opening ' + (i + 1) + ': width and height must be greater than 0.'); else if (!(Number.isInteger(q) && q >= 1)) e.push('Opening ' + (i + 1) + ': quantity must be a whole number of at least 1.'); else open += ow * U[o.u] * oh * U[o.u] * q; });
+    if (e.length) return { e: e }; var gross = L * U[u] * H * U[u]; if (open >= gross) return { e: ['Openings are as large as or larger than the wall.'] };
+    var net = gross - open, vol = net * T * U[u], withJ = (a + j) / 1e3 * (b + j) / 1e3 * (c + j) / 1e3, solid = a / 1e3 * b / 1e3 * c / 1e3, exact = Math.round(vol / withJ * 1e6) / 1e6, wet = Math.max(0, vol - exact * solid), dry = wet * 1.27;
+    if (![net, vol, exact, wet].every(isFinite)) return { e: ['Please check your inputs.'] };
+    return { r: { req: Math.ceil(exact), rec: Math.ceil(exact * (1 + w / 100)), net: net, ft2: net / (.3048 * .3048), open: open, vol: vol, wet: wet, dry: dry, dft3: dry / Math.pow(.3048, 3) }, u: { size: a + ' × ' + b + ' × ' + c + ' mm', j: j + ' mm', t: T + ' ' + u, w: w + '%' } };
+  }
+  form.addEventListener('submit', function (ev) { ev.preventDefault(); var x = calc(), L = kind === 'brick' ? 'brick' : 'block'; out.replaceChildren();
+    if (x.e) { var d = el('div', 'panel'); d.setAttribute('role', 'alert'); d.style.borderColor = '#E5534B'; d.appendChild(el('strong', '', 'Please check your inputs')); var ul = el('ul', 'assump'); x.e.forEach(function (m) { ul.appendChild(el('li', 'form-error', m)); }); d.appendChild(ul); out.appendChild(d); return; }
+    var r = x.r, hero = el('div', 'result-hero'); hero.appendChild(el('span', 'caption', 'Recommended purchase')); hero.appendChild(el('strong', 'result-big', fmt(r.rec))); hero.appendChild(el('span', 'small', L + 's including ' + x.u.w + ' wastage')); out.appendChild(hero);
+    var g = el('div', 'result-grid'); [[L[0].toUpperCase() + L.slice(1) + 's required', fmt(r.req), ''], ['Net wall area', fmt(r.net, 2) + ' m²', fmt(r.ft2, 1) + ' sq ft'], ['Openings deducted', fmt(r.open, 2) + ' m²', ''], ['Wall volume', fmt(r.vol, 2) + ' m³', ''], ['Mortar (wet)', fmt(r.wet, 3) + ' m³', ''], ['Mortar (dry mix)', fmt(r.dry, 3) + ' m³', fmt(r.dft3, 1) + ' cu ft']].forEach(function (s) { var t = el('div', 'stat'); t.appendChild(el('span', 'caption', s[0])); t.appendChild(el('strong', '', s[1])); if (s[2]) t.appendChild(el('small', '', s[2])); g.appendChild(t); }); out.appendChild(g);
+    var p = el('div', 'panel'); p.appendChild(el('h2', 'h3', 'How this was calculated')); var al = el('ul', 'assump'); [L + ' size: ' + x.u.size, 'Mortar joint: ' + x.u.j, 'Wall thickness: ' + x.u.t, 'Wastage: ' + x.u.w, 'Dry mortar factor: 1.27', 'Quantity = net wall volume ÷ volume of one ' + L + ' including its mortar joint, rounded up.'].forEach(function (s) { al.appendChild(el('li', '', s)); }); p.appendChild(al); out.appendChild(p); });
+  tabs();
+})();

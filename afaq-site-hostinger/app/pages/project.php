@@ -1,0 +1,3 @@
+<?php defined('AFAQ') || exit; $p = row('SELECT * FROM projects WHERE slug=? AND published=1', [$slug]); if (!$p) return not_found();
+$rel = array_values(array_filter(projects_pub($p['category'], '', 6), function ($r) use ($p) { return $r['id'] != $p['id']; })); if (!$rel) $rel = array_values(array_filter(projects_pub('', '', 4), function ($r) use ($p) { return $r['id'] != $p['id']; }));
+render('project', ['title' => $p['name'], 'desc' => mb_substr(strip_tags((string)$p['description']), 0, 160) ?: $p['name'], 'p' => $p, 'rel' => array_slice($rel, 0, 3), 'gal' => json_decode($p['gallery'] ?: '[]', true) ?: [], 'ogimage' => $p['image'] ? img($p['image']) : '']);
