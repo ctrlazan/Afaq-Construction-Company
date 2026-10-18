@@ -1,2 +1,0 @@
-<?php defined('AFAQ') || exit; $pre = rows("SELECT kind,name,length_mm l,width_mm w,height_mm h,joint_mm j FROM presets WHERE active=1 ORDER BY sort ASC, name ASC");
-render('calculators', ['title' => 'Brick & block calculator', 'desc' => 'Estimate bricks, blocks and mortar for your wall.', 'pre' => $pre, 'type' => ($_GET['type'] ?? '') === 'block' ? 'block' : 'brick', 'scripts' => ['/assets/calc.js']]);
