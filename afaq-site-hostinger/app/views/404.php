@@ -1,1 +1,0 @@
-<?php defined('AFAQ') || exit; ?><section class="section"><div class="container stack gap4"><h1 class="h1">Page not found</h1><p class="lead">The page you are looking for does not exist or has moved.</p><div><a href="/" class="btn btn-primary">Back to home</a></div></div></section>
