@@ -1,0 +1,1 @@
+<?php defined('AFAQ') || exit; ?><section class="section"><div class="container stack gap4"><h1 class="h1">Something went wrong</h1><p class="lead">Please try again in a moment. If the problem continues, contact us.</p><div><a href="/" class="btn btn-primary">Back to home</a></div></div></section>

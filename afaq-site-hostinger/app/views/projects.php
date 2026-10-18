@@ -1,0 +1,6 @@
+<?php defined('AFAQ') || exit; $u = function ($c, $s) { $a = array_filter(['category' => $c, 'status' => $s]); return '/projects' . ($a ? '?' . http_build_query($a) : ''); };
+$chip = function ($l, $href, $on) { return '<a class="fchip' . ($on ? ' on' : '') . '" href="' . h($href) . '"' . ($on ? ' aria-current="true"' : '') . '>' . h($l) . '</a>'; }; ?>
+<section class="section"><div class="container stack gap8"><div class="stack gap3"><span class="eyebrow">Portfolio</span><h1 class="h1">Projects</h1></div>
+<?php if (!$any): include ROOT . '/app/views/empty.php'; else: ?><div class="filters"><div class="chips"><?= $chip('All', $u('', $st), $cat === '') ?><?php foreach ($cats as $c) echo $chip($c, $u($c, $st), $cat === $c); ?></div>
+<div class="chips"><?= $chip('Any status', $u($cat, ''), $st === '') ?><?php foreach (STATUSES as $k => $v) echo $chip($v, $u($cat, $k), $st === $k); ?></div></div>
+<?php if (!$list): ?><p class="notice">No projects match these filters. <a href="/projects">Clear filters</a></p><?php else: ?><div class="grid grid-3"><?php foreach ($list as $i => $p) { $large = $i === 0 && $p['featured'] && count($list) > 2; include ROOT . '/app/views/card.php'; } ?></div><?php endif; endif; ?></div></section>
